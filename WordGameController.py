@@ -1,14 +1,17 @@
+#! /usr/bin/env python3
 from threading import Timer, Thread
 from tkinter import *
 from WordGameModel import WordGameModel
+import json
 
 time_per_game = 10 # seconds
 
 class WordGameController:
 
-    def __init__(self, d):
+    def __init__(self, d, s):
         Thread.__init__(self)
         self.dict = d
+        self.scoring = s
         print("The loaded dictionary is ")
         print(d)
         self.running = False
@@ -16,13 +19,15 @@ class WordGameController:
 
     def newGame(self):
         self.running = True
-        self.game = WordGameModel(self.dict, self)
+        for v in word_variables:
+            v.set("")
+        self.game = WordGameModel(self.dict, self.scoring, self)
         self.timer = Timer(time_per_game, self.stopGame)
         self.timer.start()
 
     def stopGame(self):
         self.running = False
-        print(self.game.scoreGame())
+        scoreVar.set("Your score is %i"%(int(self.game.scoreGame())))
 
     def keyReleased(self, event):
         if self.running and self.game:
@@ -37,16 +42,19 @@ class WordGameController:
         currentWordVar.set(word)
     
 def loadDict(filename):
-    f = open(filename, 'r')
-    wordlist = []
-    for word in f:
-        wordlist.append(word.rstrip().upper())
-    f.close()
+    with open(filename, 'r') as f:
+        wordlist = []
+        for word in f:
+            wordlist.append(word.rstrip().upper())
+        f.close()
     return wordlist
     
 if __name__ == '__main__':
     d = loadDict("dictionary.txt")
-    gameController = WordGameController(d)
+    with open('pyWerdScores.json') as data_file:
+        s = json.load(data_file)
+    
+    gameController = WordGameController(d, s)
 
     root = Tk()
     root.title("pyWerd")
@@ -66,7 +74,7 @@ if __name__ == '__main__':
     
     i = 0
     for l in word_labels:
-        word_variables[i].set("Word #%i"%(i))
+        word_variables[i].set("")
         l.grid(row=(i%15),column=(i//15))
         i = i + 1
 
@@ -75,6 +83,10 @@ if __name__ == '__main__':
     currentWordVar = StringVar()
     currentWord = Label(container, textvariable=currentWordVar, bg='white')
     currentWord.pack(side=BOTTOM, padx=5, pady=5)
+
+    scoreVar = StringVar()
+    scoreLbl = Label(container, textvariable=scoreVar, bg='white')
+    scoreLbl.pack(side=LEFT,anchor=S,padx=5,pady=5)
 
     newGameButton = Button(container, text="New Game",
                            command = gameController.newGame)

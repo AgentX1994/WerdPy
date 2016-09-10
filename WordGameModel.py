@@ -6,7 +6,7 @@ from threading import Thread, Timer
 
 class WordGameModel:
 
-    def __init__(self, d, controller):
+    def __init__(self, d, s, controller):
         self.dict = d
         self.letters = get_letters()     # The 12 selected letters
         print(self.letters)
@@ -15,13 +15,13 @@ class WordGameModel:
         self.words = []                  # Words that have been spelled
         self.waiting = False             # Penalty waiting after entering the same word twice
         self.controller = controller     # The parent controller
+        self.scoreRules = s              # A dictionary for scoring rules
 
     def keyReleased(self, event):
         if self.waiting:
             return
         c = event.char
         if c.upper() in self.cur_letters:
-            print(c.upper())
             self.word.append(c.upper())
             self.cur_letters.remove(c.upper())
             self.controller.updateCurrentWord(''.join(self.word))
@@ -40,7 +40,7 @@ class WordGameModel:
                 self.cur_letters = self.letters
                 t = Timer(3,self.endPenalty)
                 t.start()
-        elif event.keysym == 'Backspace':
+        elif event.keysym == 'BackSpace':
             self.cur_letters.append(self.word.pop())
             self.controller.updateCurrentWord(''.join(self.word))
             
@@ -55,19 +55,32 @@ class WordGameModel:
             if not word in self.dict:
                 score -= 5
             else:
+                # Add up the values of the letters
                 for c in word:
-                    score += getScoreForLetter(c)
-        return score
+                    score += self.getScoreForLetter(c)
+                # Get the multiplier for length
+                # restrict clamps the length of the word in the range [5,10]
+                score *= self.scoreRules['multipliers'][restrict(len(word),[5,10])-5]
+        return int(score)
+    
+    def getScoreForLetter(self, c):
+        return self.scoreRules['letters'][c]
+
+# clamps the integer argument x to the range specified by minmax: [min, max]
+def restrict(x, minmax):
+    if x < minmax[0]:
+        return minmax[0]
+    elif x > minmax[1]:
+        return minmax[1]
+    else:
+        return x
 
 def get_letters():
     letters = []
     for i in range(12):
-        letters.append(random.choice("ABCDEFGHIJKLMNOPQRSTUVWXYZ"))
+        letters.append(random.choice("ADD"))
+        #letters.append(random.choice("ABCDEFGHIJKLMNOPQRSTUVWXYZ"))
     return letters
-
-def getScoreForLetter(c):
-    # TODO: put in scoring system
-    return 1
 
 
 
